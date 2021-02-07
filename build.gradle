@@ -1,0 +1,41 @@
+import org.apache.tools.ant.taskdefs.condition.Os
+
+plugins {
+    id 'application'
+    id 'org.openjfx.javafxplugin' version '0.0.9'
+}
+
+repositories {
+	jcenter();
+    maven {
+    	url = 'https://frcmaven.wpi.edu/artifactory/release';
+   	}
+}
+
+
+// I'm assuming everyone is running on x86_64, and is Linux/MacOS/Windows.
+// If not just manually change platform
+def platform = (Os.isFamily(Os.FAMILY_WINDOWS) ? "windowsx86-64" : 
+				(Os.isFamily(Os.FAMILY_MAC) ? "osxx86-64" : "linuxx86-64"))
+
+def wpilibver = "2020.3.2"
+
+dependencies {
+	implementation "edu.wpi.first.wpilibj:wpilibj-java:${wpilibver}"
+	implementation "edu.wpi.first.hal:hal-java:${wpilibver}"
+	implementation "edu.wpi.first.wpiutil:wpiutil-java:${wpilibver}"
+	implementation "edu.wpi.first.ntcore:ntcore-java:${wpilibver}"
+	
+	runtime "edu.wpi.first.hal:hal-jni:${wpilibver}:${platform}"
+	runtime "edu.wpi.first.ntcore:ntcore-jni:${wpilibver}:${platform}"
+	
+	implementation 'org.apache.commons:commons-csv:1.8'
+	implementation 'org.ejml:ejml-all:0.40'
+}
+
+javafx {
+	version = '15.0.1'
+	modules = [ 'javafx.controls' ]
+}
+
+mainClassName = 'org.hyperonline.trajectorydemo.TrajectoryDemo'
