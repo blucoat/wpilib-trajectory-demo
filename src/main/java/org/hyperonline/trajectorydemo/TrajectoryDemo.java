@@ -39,23 +39,19 @@ public class TrajectoryDemo extends Application {
 	private static final double WINDOW_HEIGHT = FIELD_HEIGHT * PIXELS_PER_METER;
 	private static final double WINDOW_WIDTH = FIELD_WIDTH * PIXELS_PER_METER;
 
-	private Trajectory makeTrajectory(List<Translation2d> waypoints) {
-		// Create a smooth trajectory from the list of waypoints
-		Pose2d start = new Pose2d(waypoints.get(0), new Rotation2d(0));
-		Pose2d end = new Pose2d(waypoints.get(waypoints.size() - 1), new Rotation2d(0));
-		List<Translation2d> interior = waypoints.subList(1, waypoints.size() - 1);
+	private Trajectory makeTrajectory(List<Pose2d> waypoints) {
 		TrajectoryConfig config = new TrajectoryConfig(1, 1);
 		
-		return TrajectoryGenerator.generateTrajectory(start, interior, end, config);
+		return TrajectoryGenerator.generateTrajectory(waypoints, config);
 	}
 
 	@Override
 	public void start(Stage primaryStage) throws Exception {
 		// Read a list of points from a CSV file.
 		Reader in = new FileReader("slalompath_nobom.csv");
-		List<Translation2d> waypoints = CSVFormat.DEFAULT.parse(in).getRecords().stream()
-				.map(TrajectoryDemo::recordToTranslation2d) // convert CSV records to Translation2d's
-				.map(t -> t.times(Units.inchesToMeters(1.0))) // scale so units are in meters
+		List<Pose2d> waypoints = CSVFormat.DEFAULT.parse(in).getRecords().stream()
+				.map(TrajectoryDemo::recordToPose2d) // convert CSV records to Translation2d's
+				.map(TrajectoryDemo::scalePoseToMeters) // scale so units are in meters
 				.collect(Collectors.toList()); // collect results into a list
 
 		if (waypoints.size() < 2) {
@@ -64,13 +60,15 @@ public class TrajectoryDemo extends Application {
 		
 		Trajectory trajectory = makeTrajectory(waypoints);
 		
+		System.out.println(trajectory);
+		
 		// Get a list of points in the new trajecotry
 		List<Translation2d> trajectoryPoints = trajectory.getStates().stream()
 				.map(state -> state.poseMeters.getTranslation()).collect(Collectors.toList());
 
 		// Plot both the original waypoints and the new trajectory as paths.
 		// Path is part of JavaFX. It refers to a path drawn on the screen.
-		Path origPath = makePath(waypoints);
+		Path origPath = makePathFromPose(waypoints);
 		origPath.setStroke(Color.BLUE);
 		Path smoothPath = makePath(trajectoryPoints);
 		smoothPath.setStroke(Color.RED);
@@ -83,6 +81,10 @@ public class TrajectoryDemo extends Application {
 		primaryStage.show();
 	}
 
+	private static Path makePathFromPose(List<Pose2d> posesMeters) {
+		return makePath(posesMeters.stream().map(Pose2d::getTranslation).collect(Collectors.toList()));
+	}
+	
 	// Given a list of points, make a path for drawing on the screen.
 	private static Path makePath(List<Translation2d> pointsMeters) {
 		// Scale the coordinates to use pixels instead of meters
@@ -99,10 +101,17 @@ public class TrajectoryDemo extends Application {
 
 		return new Path(pathElems);
 	}
+	
+	private static Pose2d scalePoseToMeters(Pose2d in) {
+		return new Pose2d(in.getTranslation().times(Units.inchesToMeters(1)), in.getRotation());
+	}
 
-	// Given a row of a CSV file, make a Translation2d
-	private static Translation2d recordToTranslation2d(CSVRecord record) {
-		return new Translation2d(Double.parseDouble(record.get(0)), Double.parseDouble(record.get(1)));
+	// Given a row of a CSV file, make a Pose2d
+	private static Pose2d recordToPose2d(CSVRecord record) {
+		return new Pose2d(
+				Double.parseDouble(record.get(0)), 
+				Double.parseDouble(record.get(1)),
+				Rotation2d.fromDegrees(Double.parseDouble(record.get(2))));
 	}
 
 	public static void main(String[] args) {
