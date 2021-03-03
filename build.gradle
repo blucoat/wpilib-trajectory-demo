@@ -6,7 +6,7 @@ plugins {
 }
 
 repositories {
-	jcenter();
+	mavenCentral();
     maven {
     	url = 'https://frcmaven.wpi.edu/artifactory/release';
    	}
@@ -30,6 +30,7 @@ dependencies {
 	runtime "edu.wpi.first.ntcore:ntcore-jni:${wpilibver}:${platform}"
 	
 	implementation 'org.apache.commons:commons-csv:1.8'
+	implementation 'commons-io:commons-io:2.8.0'
 	implementation 'org.ejml:ejml-all:0.40'
 }
 

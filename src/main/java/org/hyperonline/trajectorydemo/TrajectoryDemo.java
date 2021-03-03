@@ -1,13 +1,20 @@
 package org.hyperonline.trajectorydemo;
 
-import java.io.FileReader;
+import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.Reader;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
+import org.apache.commons.io.ByteOrderMark;
+import org.apache.commons.io.input.BOMInputStream;
 
 import edu.wpi.first.wpilibj.geometry.Pose2d;
 import edu.wpi.first.wpilibj.geometry.Rotation2d;
@@ -45,11 +52,22 @@ public class TrajectoryDemo extends Application {
 		return TrajectoryGenerator.generateTrajectory(waypoints, config);
 	}
 
+	private static CSVParser openCSVFile(String filename) throws IOException {
+		InputStream fileIn = new FileInputStream(filename);
+		BOMInputStream bomIn = new BOMInputStream(fileIn, 
+				ByteOrderMark.UTF_8, 
+				ByteOrderMark.UTF_16LE, ByteOrderMark.UTF_16BE,
+				ByteOrderMark.UTF_32LE, ByteOrderMark.UTF_32BE);
+		String charsetName = bomIn.hasBOM() ? bomIn.getBOMCharsetName() : "UTF-8";
+		Reader reader = new InputStreamReader(bomIn, charsetName);
+		
+		return CSVFormat.DEFAULT.parse(reader);
+	}
+	
 	@Override
-	public void start(Stage primaryStage) throws Exception {
-		// Read a list of points from a CSV file.
-		Reader in = new FileReader("slalompath_nobom.csv");
-		List<Pose2d> waypoints = CSVFormat.DEFAULT.parse(in).getRecords().stream()
+	public void start(Stage primaryStage) throws Exception {	
+		CSVParser parser = openCSVFile("barrelracing.csv");
+		List<Pose2d> waypoints = parser.getRecords().stream()
 				.map(TrajectoryDemo::recordToPose2d) // convert CSV records to Translation2d's
 				.map(TrajectoryDemo::scalePoseToMeters) // scale so units are in meters
 				.collect(Collectors.toList()); // collect results into a list
@@ -64,7 +82,8 @@ public class TrajectoryDemo extends Application {
 		
 		// Get a list of points in the new trajecotry
 		List<Translation2d> trajectoryPoints = trajectory.getStates().stream()
-				.map(state -> state.poseMeters.getTranslation()).collect(Collectors.toList());
+				.map(state -> state.poseMeters.getTranslation())
+				.collect(Collectors.toList());
 
 		// Plot both the original waypoints and the new trajectory as paths.
 		// Path is part of JavaFX. It refers to a path drawn on the screen.
